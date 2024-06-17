@@ -1,63 +1,28 @@
 import tableauserverclient as TSC
-from tableauhyperapi import HyperProcess, Telemetry, Connection
-import pandas as pd
-import zipfile
-import os
 
 # Tableau Server credentials
 server_url = 'YOUR_SERVER_URL'
 personal_access_token_name = 'YOUR_ACCESS_TOKEN_NAME'
 personal_access_token_secret = 'YOUR_ACCESS_TOKEN_SECRET'
 site_id = 'YOUR_SITE_ID'  # Usually an empty string for the default site
-project_id = 'YOUR_PROJECT_ID'
-hyper_datasource_name = 'YOUR_HYPER_DATASOURCE_NAME'
+project_name = 'YOUR_PROJECT_NAME'
+hyper_file_path = 'path_to_your_hyper_file.hyper'
+datasource_name = 'YOUR_DATASOURCE_NAME'
 
 # Authenticate with Tableau Server using personal access token
 tableau_auth = TSC.PersonalAccessTokenAuth(personal_access_token_name, personal_access_token_secret, site_id)
 server = TSC.Server(server_url, use_server_version=True)
 
 with server.auth.sign_in(tableau_auth):
-    # Find the project
+    # Find the project by name
     all_projects, pagination_item = server.projects.get()
-    project = next(project for project in all_projects if project.id == project_id)
+    project = next(proj for proj in all_projects if proj.name == project_name)
     
-    # Find the datasource
-    all_datasources, pagination_item = server.datasources.get()
-    datasource = next(ds for ds in all_datasources if ds.name == hyper_datasource_name and ds.project_id == project.id)
+    # Create a new datasource item
+    new_datasource = TSC.DatasourceItem(project.id, name=datasource_name)
     
-    # Download the datasource (.tdsx file)
-    tdsx_file_path = 'downloaded_datasource.tdsx'
-    server.datasources.download(datasource.id, filepath=tdsx_file_path, include_extract=True)
+    # Publish the Hyper file as a datasource
+    new_datasource = server.datasources.publish(new_datasource, hyper_file_path, TSC.Server.PublishMode.Overwrite)
+    
+    print(f"Datasource {new_datasource.name} published with id {new_datasource.id}")
 
-# Step 3: Extract the .hyper file from the .tdsx file
-def extract_hyper_from_tdsx(tdsx_file_path, extract_to='extracted_hyper'):
-    with zipfile.ZipFile(tdsx_file_path, 'r') as zip_ref:
-        zip_ref.extractall(extract_to)
-        # Locate the .hyper file
-        for root, dirs, files in os.walk(extract_to):
-            for file in files:
-                if file.endswith('.hyper'):
-                    return os.path.join(root, file)
-    raise FileNotFoundError("No .hyper file found in the .tdsx package")
-
-# Extract the .hyper file
-hyper_file_path = extract_hyper_from_tdsx(tdsx_file_path)
-
-# Step 4: Read the .hyper file into a Pandas DataFrame
-def read_hyper_to_dataframe(hyper_file_path, table_name='Extract'):
-    # Start a new Hyper process
-    with HyperProcess(telemetry=Telemetry.SEND_USAGE_DATA_TO_TABLEAU) as hyper:
-        # Connect to the Hyper file
-        with Connection(endpoint=hyper.endpoint, database=hyper_file_path) as connection:
-            # Execute a query to read the data
-            query = f'SELECT * FROM {table_name}'
-            result = connection.execute_list_query(query)
-            # Get the column names
-            column_names = [column.name for column in connection.catalog.get_table_definition(table_name).columns]
-            # Create a DataFrame
-            dataframe = pd.DataFrame(result, columns=column_names)
-            return dataframe
-
-# Read the Hyper file into a Pandas DataFrame
-dataframe = read_hyper_to_dataframe(hyper_file_path)
-print(dataframe.head())
