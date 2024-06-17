@@ -16,13 +16,24 @@ server = TSC.Server(server_url, use_server_version=True)
 with server.auth.sign_in(tableau_auth):
     # Find the project by name
     all_projects, pagination_item = server.projects.get()
-    project = next(proj for proj in all_projects if proj.name == project_name)
+    project = next((proj for proj in all_projects if proj.name == project_name), None)
+    
+    if project is None:
+        raise ValueError(f"Project named '{project_name}' not found")
+    print(f"Found project: {project.name} with id: {project.id}")
     
     # Create a new datasource item
     new_datasource = TSC.DatasourceItem(project.id, name=datasource_name)
     
     # Publish the Hyper file as a datasource
-    new_datasource = server.datasources.publish(new_datasource, hyper_file_path, TSC.Server.PublishMode.Overwrite)
-    
-    print(f"Datasource {new_datasource.name} published with id {new_datasource.id}")
+    try:
+        new_datasource = server.datasources.publish(new_datasource, hyper_file_path, TSC.Server.PublishMode.Overwrite)
+        print(f"Datasource '{new_datasource.name}' published. Here is the raw response object:\n{new_datasource}")
+        print(f"Datasource ID: {new_datasource.id}")
+    except Exception as e:
+        print(f"Error publishing datasource: {e}")
 
+    if new_datasource.id is None:
+        raise ValueError("Failed to obtain the datasource ID after publishing")
+    else:
+        print(f"Published datasource ID: {new_datasource.id}")
