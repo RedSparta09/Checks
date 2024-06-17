@@ -1,0 +1,48 @@
+import tableauserverclient as TSC
+from tableauhyperapi import HyperProcess, Telemetry, Connection, TableDefinition, SqlType, Inserter, TableName
+import pandas as pd
+
+# Tableau Server credentials
+server_url = 'YOUR_SERVER_URL'
+username = 'YOUR_USERNAME'
+password = 'YOUR_PASSWORD'
+site_id = 'YOUR_SITE_ID'  # Usually an empty string for the default site
+project_id = 'YOUR_PROJECT_ID'
+hyper_datasource_name = 'YOUR_HYPER_DATASOURCE_NAME'
+
+# Authenticate with Tableau Server
+tableau_auth = TSC.TableauAuth(username, password, site_id)
+server = TSC.Server(server_url, use_server_version=True)
+
+with server.auth.sign_in(tableau_auth):
+    # Find the project
+    all_projects, pagination_item = server.projects.get()
+    project = next(project for project in all_projects if project.id == project_id)
+    
+    # Find the datasource
+    all_datasources, pagination_item = server.datasources.get()
+    datasource = next(ds for ds in all_datasources if ds.name == hyper_datasource_name and ds.project_id == project.id)
+    
+    # Download the datasource (Hyper file)
+    hyper_file_path = 'downloaded_datasource.hyper'
+    server.datasources.download(datasource.id, filepath=hyper_file_path, include_extract=True)
+
+# Step 3: Read the Hyper File into a Pandas DataFrame
+
+def read_hyper_to_dataframe(hyper_file_path, table_name='Extract'):
+    # Start a new Hyper process
+    with HyperProcess(telemetry=Telemetry.SEND_USAGE_DATA_TO_TABLEAU) as hyper:
+        # Connect to the Hyper file
+        with Connection(endpoint=hyper.endpoint, database=hyper_file_path) as connection:
+            # Execute a query to read the data
+            query = f'SELECT * FROM {table_name}'
+            result = connection.execute_list_query(query)
+            # Get the column names
+            column_names = [column.name for column in connection.catalog.get_table_definition(table_name).columns]
+            # Create a DataFrame
+            dataframe = pd.DataFrame(result, columns=column_names)
+            return dataframe
+
+# Read the Hyper file into a Pandas DataFrame
+dataframe = read_hyper_to_dataframe(hyper_file_path)
+print(dataframe.head())
