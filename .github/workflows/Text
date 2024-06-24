@@ -1,19 +1,23 @@
-# Sample data (replace with actual data)
-data = [
-    {"primaryProduct": "European Governments", "buySell": "Sell", "tenure": "20+", "shown": "400,000", "EMA Category": "Asset Manager", "period": "Today"},
-    {"primaryProduct": "European Governments", "buySell": "Sell", "tenure": "10-20", "shown": "400,000", "EMA Category": "Hedge Fund", "period": "Previous Week"},
-    {"primaryProduct": "European Governments", "buySell": "Buy", "tenure": "2-10", "shown": "450,000", "EMA Category": "Hedge Fund", "period": "Today"}
-    # Add more data entries as needed
-]
+import pandas as pd
+
+# Sample data (replace with your actual DataFrame)
+data = pd.DataFrame({
+    "primaryProduct": ["European Governments", "European Governments", "European Governments"],
+    "buySell": ["Sell", "Sell", "Buy"],
+    "tenure": ["20+", "10-20", "2-10"],
+    "shown": ["400,000", "400,000", "450,000"],
+    "EMA Category": ["Asset Manager", "Hedge Fund", "Hedge Fund"],
+    "period": ["Today", "Previous Week", "Today"]
+})
 
 # Extract relevant information
-today_volume = next(entry["shown"] for entry in data if entry["period"] == "Today")
-yesterday_volume = next(entry["shown"] for entry in data if entry["period"] == "Yesterday")
-previous_week_volume = next(entry["shown"] for entry in data if entry["period"] == "Previous Week")
+today_volume = data.loc[data["period"] == "Today", "shown"].iloc[0]
+yesterday_volume = data.loc[data["period"] == "Yesterday", "shown"].iloc[0]
+previous_week_volume = data.loc[data["period"] == "Previous Week", "shown"].iloc[0]
 
 # Calculate percentage change
-volume_change_yesterday = (float(today_volume) - float(yesterday_volume)) / float(yesterday_volume) * 100
-volume_change_previous_week = (float(today_volume) - float(previous_week_volume)) / float(previous_week_volume) * 100
+volume_change_yesterday = (float(today_volume.replace(",", "")) - float(yesterday_volume.replace(",", ""))) / float(yesterday_volume.replace(",", "")) * 100
+volume_change_previous_week = (float(today_volume.replace(",", "")) - float(previous_week_volume.replace(",", ""))) / float(previous_week_volume.replace(",", "")) * 100
 
 # Generate commentary
 commentary = f"European government bonds showed interesting trends today:\n"
