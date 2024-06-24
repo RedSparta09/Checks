@@ -1,3 +1,5 @@
+import pandas as pd
+
 # Sample DataFrame
 data = {
     'primaryProduct': ['European Government Bonds', 'European Government Bonds', 'European Government Bonds'],
@@ -10,20 +12,36 @@ data = {
 
 df = pd.DataFrame(data)
 
-# Generating commentary
 def generate_commentary(df):
-    today_volume = df[df['period'] == 'Today']['volume'].sum()
-    yesterday_volume = df[df['period'] == 'Yesterday']['volume'].sum()
-    last_week_volume = df[df['period'] == 'Last Week']['volume'].sum()
+    today_data = df[df['period'] == 'Today']
+    yesterday_data = df[df['period'] == 'Yesterday']
+    last_week_data = df[df['period'] == 'Last Week']
 
-    ema_today = df[(df['period'] == 'Today')].groupby('EMA category')['volume'].sum()
-    max_ema_today = ema_today.idxmax()
+    today_volume = today_data['volume'].sum()
+    yesterday_volume = yesterday_data['volume'].sum()
+    last_week_volume = last_week_data['volume'].sum()
+
+    volume_change_vs_yesterday = (today_volume - yesterday_volume) / yesterday_volume * 100 if yesterday_volume else 0
+    volume_change_vs_last_week = (today_volume - last_week_volume) / last_week_volume * 100 if last_week_volume else 0
+
+    tenure_today = today_data['tenure'].unique()
+    tenure_today_str = ', '.join(tenure_today)
+
+    ema_today = today_data.groupby('EMA category')['volume'].sum()
+    max_ema_today = ema_today.idxmax() if not ema_today.empty else 'N/A'
 
     commentary = []
-    commentary.append(f"European government bonds had the same volume shown as of previous week but 25% less than yesterday.")
-    commentary.append(f"All of the volume today was seen at the 20+ years area of the curve.")
-    commentary.append(f"Asset managers are the clients who showed the best volume today.")
-    commentary.append(f"Volume seen from hedge funds reduced today.")
+    commentary.append(f"European government bonds had {'the same volume' if today_volume == last_week_volume else f'{abs(volume_change_vs_last_week):.2f}% {"less" if volume_change_vs_last_week < 0 else "more"} volume'} compared to the previous week.")
+    commentary.append(f"European government bonds had {'the same volume' if today_volume == yesterday_volume else f'{abs(volume_change_vs_yesterday):.2f}% {"less" if volume_change_vs_yesterday < 0 else "more"} volume'} compared to yesterday.")
+    commentary.append(f"All of the volume today was seen at the {tenure_today_str} area of the curve.")
+    commentary.append(f"{max_ema_today} are the clients who showed the best volume today.")
+    
+    # Adding reduction in volume from Hedge Funds if applicable
+    hedge_funds_yesterday_volume = yesterday_data[yesterday_data['EMA category'] == 'Hedge Funds']['volume'].sum()
+    hedge_funds_today_volume = today_data[today_data['EMA category'] == 'Hedge Funds']['volume'].sum()
+
+    if hedge_funds_yesterday_volume and hedge_funds_today_volume < hedge_funds_yesterday_volume:
+        commentary.append(f"Volume seen from hedge funds reduced today.")
 
     return " ".join(commentary)
 
