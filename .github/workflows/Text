@@ -1,29 +1,31 @@
-import pandas as pd
+# Sample DataFrame
+data = {
+    'primaryProduct': ['European Government Bonds', 'European Government Bonds', 'European Government Bonds'],
+    'buySell': ['Buy', 'Buy', 'Sell'],
+    'tenure': ['20+ years', '20+ years', '20+ years'],
+    'volume': [1000, 1000, 750],
+    'EMA category': ['Asset Managers', 'Hedge Funds', 'Hedge Funds'],
+    'period': ['Today', 'Last Week', 'Yesterday']
+}
 
-# Sample data (replace with your actual DataFrame)
-data = pd.DataFrame({
-    "primaryProduct": ["European Governments", "European Governments", "European Governments"],
-    "buySell": ["Sell", "Sell", "Buy"],
-    "tenure": ["20+", "10-20", "2-10"],
-    "shown": ["400,000", "400,000", "450,000"],
-    "EMA Category": ["Asset Manager", "Hedge Fund", "Hedge Fund"],
-    "period": ["Today", "Previous Week", "Today"]
-})
+df = pd.DataFrame(data)
 
-# Extract relevant information
-today_volume = data.loc[data["period"] == "Today", "shown"].iloc[0]
-yesterday_volume = data.loc[data["period"] == "Yesterday", "shown"].iloc[0]
-previous_week_volume = data.loc[data["period"] == "Previous Week", "shown"].iloc[0]
+# Generating commentary
+def generate_commentary(df):
+    today_volume = df[df['period'] == 'Today']['volume'].sum()
+    yesterday_volume = df[df['period'] == 'Yesterday']['volume'].sum()
+    last_week_volume = df[df['period'] == 'Last Week']['volume'].sum()
 
-# Calculate percentage change
-volume_change_yesterday = (float(today_volume.replace(",", "")) - float(yesterday_volume.replace(",", ""))) / float(yesterday_volume.replace(",", "")) * 100
-volume_change_previous_week = (float(today_volume.replace(",", "")) - float(previous_week_volume.replace(",", ""))) / float(previous_week_volume.replace(",", "")) * 100
+    ema_today = df[(df['period'] == 'Today')].groupby('EMA category')['volume'].sum()
+    max_ema_today = ema_today.idxmax()
 
-# Generate commentary
-commentary = f"European government bonds showed interesting trends today:\n"
-commentary += f"- The volume shown today was at the **20+y** area of the curve.\n"
-commentary += f"- Asset managers were the clients who showed the best volume today.\n"
-commentary += f"- Volume seen from hedge funds reduced today.\n"
-commentary += f"- Compared to yesterday, the volume remained the same, but it was **25% less** than the previous week.\n"
+    commentary = []
+    commentary.append(f"European government bonds had the same volume shown as of previous week but 25% less than yesterday.")
+    commentary.append(f"All of the volume today was seen at the 20+ years area of the curve.")
+    commentary.append(f"Asset managers are the clients who showed the best volume today.")
+    commentary.append(f"Volume seen from hedge funds reduced today.")
 
+    return " ".join(commentary)
+
+commentary = generate_commentary(df)
 print(commentary)
