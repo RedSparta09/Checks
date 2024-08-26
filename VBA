@@ -1,0 +1,33 @@
+Sub ImportHtmlTable()
+    Dim htmlFile As Object
+    Dim htmlBody As Object
+    Dim tbl As Object
+    Dim ws As Worksheet
+    Dim i As Integer
+    Dim j As Integer
+
+    ' Create a new worksheet
+    Set ws = ThisWorkbook.Sheets.Add
+    ws.Name = "ExtractedTable"
+
+    ' Load the HTML file
+    Set htmlFile = CreateObject("htmlfile")
+    With CreateObject("scripting.filesystemobject")
+        Set htmlBody = .OpenTextFile("C:\path\to\your\file.html", 1).ReadAll
+    End With
+
+    htmlFile.body.innerHTML = htmlBody
+
+    ' Find the first table in the HTML file
+    Set tbl = htmlFile.getElementsByTagName("table")(0)
+
+    ' Loop through the table rows and cells to write to the worksheet
+    For i = 0 To tbl.Rows.Length - 1
+        For j = 0 To tbl.Rows(i).Cells.Length - 1
+            ws.Cells(i + 1, j + 1).Value = tbl.Rows(i).Cells(j).innerText
+        Next j
+    Next i
+
+    MsgBox "Table imported successfully!"
+
+End Sub
